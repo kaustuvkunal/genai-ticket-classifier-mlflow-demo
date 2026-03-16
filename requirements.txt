@@ -1,0 +1,12 @@
+# Core dependencies
+mlflow>=2.6.0
+groq>=0.2.0
+pandas>=2.0
+datasets>=2.0
+scikit-learn>=1.2
+python-dotenv>=1.0
+click>=8.0
+gradio>=3.0
+
+# Dev / testing
+pytest>=8.0

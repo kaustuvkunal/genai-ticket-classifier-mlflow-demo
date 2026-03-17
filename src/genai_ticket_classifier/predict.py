@@ -8,7 +8,7 @@ import mlflow
 from groq import Groq
 
 from .config import Config
-from .prompt import load_prompt_uri
+from .prompt import load_prompt_uri, PROMPT_TEMPLATE
 
 
 def _build_messages(prompt_template: str, customer_message: str) -> list[dict[str, str]]:
@@ -19,26 +19,48 @@ def _build_messages(prompt_template: str, customer_message: str) -> list[dict[st
     ]
 
 
+def _get_prompt_template(config: Config) -> str:
+    """Get the prompt template.
+    
+    First tries to load from MLflow registry, falls back to hardcoded template.
+    """
+    try:
+        prompt_uri = load_prompt_uri(config)
+        prompt_obj = mlflow.genai.load_prompt(prompt_uri)
+        return prompt_obj.template
+    except Exception:
+        # If MLflow is not available, use the hardcoded template
+        return PROMPT_TEMPLATE
+
+
 @mlflow.trace(name="ticket_classifier", span_type="LLM")
 def predict(config: Config, customer_message: str) -> str:
-    """Predict the ticket category for a single customer message."""
+    """Predict the ticket category for a single customer message.
+    
+    Works with or without MLflow server running.
+    If MLflow is available, uses the registered prompt.
+    Otherwise, falls back to the hardcoded template.
+    """
+    try:
+        # NOTE: Groq client reads the API key from the environment.
+        client = Groq()
 
-    # NOTE: Groq client reads the API key from the environment.
-    client = Groq()
+        prompt_template = _get_prompt_template(config)
+        messages = _build_messages(prompt_template, customer_message)
 
-    prompt_uri = load_prompt_uri(config)
-    prompt_obj = mlflow.genai.load_prompt(prompt_uri)
+        resp = client.chat.completions.create(
+            model=config.model_name,
+            messages=messages,
+            temperature=0.0,
+            max_tokens=32,
+        )
 
-    messages = _build_messages(prompt_obj.template, customer_message)
-
-    resp = client.chat.completions.create(
-        model=config.model_name,
-        messages=messages,
-        temperature=0.0,
-        max_tokens=32,
-    )
-
-    return resp.choices[0].message.content.strip()
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        # Log the error but don't re-raise - provide meaningful error info
+        import logging
+        logging.error(f"Prediction failed: {e}")
+        raise
 
 
 def predict_batch(config: Config, inputs: list[str]) -> list[str]:

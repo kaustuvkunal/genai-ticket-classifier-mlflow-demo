@@ -102,8 +102,8 @@ if __name__ == "__main__":
         print(f"✅ Using environment variable auth: {hf_username}")
     else:
         # Option 2: Use default credentials if env vars not set
-        default_username = "demouser"
-        default_password = os.getenv("PASSWD", "demopass")
+        default_username = os.getenv("GRADIO_APP_USER")
+        default_password = os.getenv("GRADIO_APP_PASSWD",)
         auth = (default_username, default_password)
         print(f"✅ Using default auth: {default_username} (password from PASSWD env var or 'demopass')")
     

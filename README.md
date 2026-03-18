@@ -1,6 +1,6 @@
 # GenAI Support-Ticket Classifier
 
-An LLM-based support-ticket classification system.
+An LLM-based IT support-ticket classification system.
 ---
 
 ## Use Case
@@ -82,7 +82,7 @@ mlflow server \
 ```
 
 ### 2. Register a Prompt 
-The below command registers the initial prompt (defined in `src/prompt.py`) with MLflow
+The below command **registers the prompt** (defined in `src/prompt.py`) with MLflow
 
 ```bash
 python3 -m src.cli register-prompt
@@ -91,52 +91,52 @@ python3 -m src.cli register-prompt
 
 ### 3. Evaluate Prompt
 
-
-```bash
-python3 -m src.cli evaluate
-```
-
-Evaluate the latest registered prompt (default)
-```bash
-python3 -m src.cli evaluate
-```
-
-Evaluate against a specific provided  registered prompt version
-`python3 -m src.cli evaluate --prompt-uri prompts:/support-ticket-classifier-prompt/1`
+python3 -m src.cli evaluate 
 
 
-### 4. Make Prediction (via CLI)
+To evaluate the **latest registered prompt** (default behavior):
+  ```bash
+  python3 -m src.cli evaluate
+  ```
 
-Use the inline prompt from `src/prompt.py` (default — no MLflow server required):
+To evaluate a **specific registered prompt version**:
+  ``` bash
+  python3 -m src.cli evaluate --prompt-uri prompts:/support-ticket-classifier-prompt/1
+  ```
+
+### 4. Make Prediction  
+
+Uses the **inline prompt*** for prediction from `src/prompt.py` (default — no MLflow server required):
+
 ```bash
 python3 -m src.cli predict "My service is down"
 ```
 
-Use a specific registered prompt version from the MLflow registry:
+Uses a **specific registered prompt version** for prediction from the MLflow registry:
+
 ```bash
 python3 -m src.cli predict "My service is down" --prompt-uri prompts:/support-ticket-classifier-prompt/1
 ```
 
 
-
 ### 5. Optimize Prompt
 
-Optimize the latest registered prompt (default):
-```bash
-python3 -m src.cli optimize
-```
+To optimize the **latest registered prompt version** (default):
+  ```bash
+  python3 -m src.cli optimize
+  ```
 
-Optimize a specific version by number:
+To optimize a **specific version** by number:
 ```bash
 python3 -m src.cli optimize --prompt-version 1
 ```
 
-Optimize using an explicit prompt URI:
+Optimize using an **explicit prompt URI**:
 ```bash
 python3 -m src.cli optimize --prompt-uri prompts:/support-ticket-classifier-prompt/1
 ```
 
-Limit scorer calls for faster runs during development:
+**Limit scorer calls** for faster runs:
 ```bash
 python3 -m src.cli optimize --max-metric-calls 50
 ```
@@ -145,7 +145,6 @@ python3 -m src.cli optimize --max-metric-calls 50
 # Deploy Project as Gradio WebApp
 
 ### Deploy on local host : Simple Interactive UI
-
 ```bash
 python3 app.py
 ```
@@ -159,60 +158,26 @@ The app provides:
 
 ---
 
-## Deploy & host on Hugging Face Spaces
+### Deployed & host on Hugging Face Spaces : here
 
-### Setup
-
-1. Create a new Space on [Hugging Face](https://huggingface.co/spaces) with **Gradio** runtime
-2. Push this repository to the Space
-
-### Configure Secrets
-
-In **Space Settings** → **Secrets**, add your API keys:
-
-```
-LLM_PROVIDER=groq
-MODEL_NAME=llama-3.1-8b-instant
-GROQ_API_KEY=your_groq_key
-# Optional: Add auth
-USERNAME=your_username
-PASSWD=your_password
-```
-
-The Space automatically runs `python app.py` on startup.
+<img width="1361" height="747" alt="Screenshot 2026-03-18 at 6 18 25 PM" src="https://github.com/user-attachments/assets/2026d04d-4b48-4243-bf23-ea3f11b1a05e" />
 
 ---
 
-## Supported LLM Providers
+## Testing
 
-| Provider | Model Example | Setup |
-|----------|---------------|-------|
-| **Groq** | `llama-3.1-8b-instant` | `GROQ_API_KEY=...` |
-| **OpenAI** | `gpt-3.5-turbo` | `OPENAI_API_KEY=...` |
+Run unit tests:
 
-Switch providers at runtime via the UI dropdown.
-
----
-
-## Project Structure
-
-```
-.
-├── app.py                    # Standalone Gradio app (deploy this!)
-├── src/
-│   ├── __init__.py
-│   ├── cli.py               # MLflow CLI commands
-│   ├── config.py            # Configuration loading
-│   ├── predict.py           # Prediction logic
-│   ├── prompt.py            # Prompt templates
-│   └── ...                  # Other utilities
-├── tests/                   # Unit tests
-├── dataset/                 # Sample data for evaluation
-├── requirements.txt         # Python dependencies
-├── .env.example            # Configuration template
-└── README.md              # This file
+```bash
+pytest
 ```
 
+Sample test messages in the app:
+- "My laptop won't connect to Wi-Fi after the update." → Incident
+- "I would like to request a new employee badge." → Request
+- "The server keeps crashing every night at 2 AM." → Problem
+- "Can we add SAML SSO support to the app?" → Change
+ 
 ---
 
 ## Configuration Reference
@@ -233,21 +198,6 @@ Switch providers at runtime via the UI dropdown.
 - `MLFLOW_EXPERIMENT` — Experiment name
 - `PROMPT_NAME` — Prompt registry name
 
----
-
-## Testing
-
-Run unit tests:
-
-```bash
-pytest
-```
-
-Sample test messages in the app:
-- "My laptop won't connect to Wi-Fi after the update." → Incident
-- "I would like to request a new employee badge." → Request
-- "The server keeps crashing every night at 2 AM." → Problem
-- "Can we add SAML SSO support to the app?" → Change
 
 ---
 
@@ -283,7 +233,8 @@ Contributions welcome! Please:
 ---
 
 **Built with:**
+- [MLflow](https://mlflow.org/) — ML workflow management
 - [Groq API](https://groq.com/) — Ultra-fast LLM inference
 - [OpenAI API](https://openai.com/) — GPT models
 - [Gradio](https://gradio.app/) — Web UI framework
-- [MLflow](https://mlflow.org/) — ML workflow management
+

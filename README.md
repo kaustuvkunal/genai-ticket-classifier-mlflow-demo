@@ -81,23 +81,27 @@ mlflow server \
   --host 127.0.0.1 --port 5000
 ```
 
-### 2. Register a Prompt
+### 2. Register a Prompt 
+The below command registers the initial prompt (defined in `src/prompt.py`) with MLflow
 
 ```bash
-python -m src.cli register-prompt
+python3 -m src.cli register-prompt
 ```
 
 
 ### 3. Evaluate Prompt
 
+
 ```bash
 python3 -m src.cli evaluate
 ```
 
-Uses latest registered prompt (default)
-`python3 -m src.cli evaluate`
+Evaluate the latest registered prompt (default)
+```bash
+python3 -m src.cli evaluate
+```
 
-Evaluate against a specific registered prompt version
+Evaluate against a specific provided  registered prompt version
 `python3 -m src.cli evaluate --prompt-uri prompts:/support-ticket-classifier-prompt/1`
 
 

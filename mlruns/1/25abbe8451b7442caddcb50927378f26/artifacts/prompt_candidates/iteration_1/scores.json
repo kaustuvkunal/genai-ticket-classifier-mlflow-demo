@@ -1,0 +1,6 @@
+{
+  "aggregate": 0.625,
+  "per_scorer": {
+    "exact_category_match": 0.625
+  }
+}

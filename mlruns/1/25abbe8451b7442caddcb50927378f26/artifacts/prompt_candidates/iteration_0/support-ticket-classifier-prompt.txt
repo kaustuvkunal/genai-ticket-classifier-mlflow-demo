@@ -1,0 +1,13 @@
+Classify the following customer_message into ** one** of these categories:
+
+- Incident   
+- Request  
+- Problem  
+- Change   
+
+Customer message:
+{{customer_message}}
+
+Return **only** the category name.
+Allowed answers: Incident, Request, Problem, Change
+No explanation. No extra text.

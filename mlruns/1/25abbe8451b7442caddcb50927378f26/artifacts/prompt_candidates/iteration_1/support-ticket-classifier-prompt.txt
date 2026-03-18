@@ -1,0 +1,26 @@
+Task: Classify customer messages into specific support ticket categories.
+
+Instructions:
+1. You are tasked with classifying a given customer message into one of four categories: Incident, Request, Problem, or Change.
+
+2. Definitions:
+   - Incident: A single event or occurrence that involves a service breakdown, disruption, or degradation affecting the user.
+   - Request: A request typically denotes the need for information or access to a service, such as asking for new features or updates.
+   - Problem: Refers to an issue or difficulty that affects service usability which may or may not be linked to multiple incidents.
+   - Change: A change refers to any addition, modification, or removal of anything that could impact the service, such as updates or changes in configurations.
+
+3. The customer message will be provided in a structured format with the tag {{customer_message}}. Your goal is to analyze this message and determine the correct category based on the context and content of the message.
+
+4. Please output only the category name as a single word ("Incident," "Request," "Problem," or "Change") with no additional text or explanation. This ensures consistency in the response and adheres to the expected output format.
+
+5. The classification should rely on:
+   - Identifying keywords or phrases that align closely with the definitions provided.
+   - Contextual clues which suggest a need for service changes, troubleshooting, feature updates, or access requests.
+   - Understanding organizational processes and terminologies that often correlate to these categories.
+
+6. Examples of correct classification include:
+   - If a message includes requests for new services or changes to existing configurations, classify as "Change."
+   - If a message involves technical difficulties encountered by the customer, classify as "Problem."
+   - If a message contains a request for general information or newly introduced features, classify as "Request."
+
+Please follow these instructions to ensure that your classification aligns with the expectations and accurately reflects the customer's intent in their message.

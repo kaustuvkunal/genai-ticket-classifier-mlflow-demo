@@ -8,10 +8,25 @@ from typing import List
 import mlflow
 
 from .config import Config
-from .predict import predict, predict_from_inputs
+from .predict import _get_llm_client, _get_prompt_template, predict_from_inputs
+from .prompt import load_prompt_uri
 from .scorers import exact_category_match
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_prompt_uri(prompt_uri: str) -> str:
+    """Resolve a prompt URI alias (for example @latest) to a concrete version URI."""
+    if "@" not in prompt_uri:
+        return prompt_uri
+
+    prompt_obj = mlflow.genai.load_prompt(prompt_uri)
+    prompt_name = getattr(prompt_obj, "name", None)
+    prompt_version = getattr(prompt_obj, "version", None)
+    if prompt_name and prompt_version is not None:
+        return f"prompts:/{prompt_name}/{prompt_version}"
+
+    return prompt_uri
 
 
 def evaluate(
@@ -32,14 +47,18 @@ def evaluate(
         additional_scorers: Extra scorer functions to include alongside the
             default ``exact_category_match`` scorer.
     """
-    logger.info(
-        f"Starting evaluation with provider={config.llm_provider}, "
-        f"model={config.model_name}, prompt_uri={prompt_uri or 'latest from config'}"
-    )
-    logger.debug(f"Data size: {len(data) if hasattr(data, '__len__') else 'unknown'} samples")
-
     mlflow.set_tracking_uri(config.mlflow_tracking_uri)
     logger.debug(f"MLflow tracking URI: {config.mlflow_tracking_uri}")
+
+    requested_prompt_uri = prompt_uri or load_prompt_uri(config, version="latest")
+    effective_prompt_uri = _resolve_prompt_uri(requested_prompt_uri)
+
+    logger.info(
+        f"Starting evaluation with provider={config.llm_provider}, "
+        f"model={config.model_name}, prompt_uri={effective_prompt_uri}"
+    )
+    total_samples = len(data) if hasattr(data, "__len__") else None
+    logger.debug(f"Data size: {total_samples if total_samples is not None else 'unknown'} samples")
 
     mlflow.set_experiment(config.experiment_name)
     logger.debug(f"Experiment: {config.experiment_name}")
@@ -52,8 +71,35 @@ def evaluate(
     # End any lingering active run so this evaluation is fully isolated.
     mlflow.end_run()
 
-    run_name = f"evaluate-{prompt_uri or 'latest'}"
+    run_name = f"evaluate-{effective_prompt_uri}"
     logger.debug(f"Starting fresh MLflow run: {run_name}")
+
+    logger.debug("Preloading prompt template and LLM client for evaluation")
+    prompt_template = _get_prompt_template(config, prompt_uri=effective_prompt_uri)
+    llm_client = _get_llm_client(config)
+    progress = {"completed": 0}
+
+    def predict_with_progress(customer_message: str) -> str:
+        """Reuse expensive evaluation dependencies across all samples."""
+        result = predict_from_inputs(
+            config,
+            {"customer_message": customer_message},
+            prompt_template=prompt_template,
+            client=llm_client,
+            traced=False,
+        )
+        progress["completed"] += 1
+        if total_samples and (
+            progress["completed"] == 1
+            or progress["completed"] == total_samples
+            or progress["completed"] % 10 == 0
+        ):
+            logger.info(
+                "Evaluation progress: %s/%s samples completed",
+                progress["completed"],
+                total_samples,
+            )
+        return result
 
     # NOTE: The lambda parameter name *must* match the key in the `inputs` dict
     # of the evaluation dataset ("customer_message") so that MLflow can wire
@@ -62,9 +108,7 @@ def evaluate(
     with mlflow.start_run(run_name=run_name):
         result = mlflow.genai.evaluate(
             data=data,
-            predict_fn=lambda customer_message: predict_from_inputs(
-                config, {"customer_message": customer_message}, prompt_uri=prompt_uri
-            ),
+            predict_fn=predict_with_progress,
             scorers=scorers,
         )
 
@@ -76,13 +120,8 @@ def evaluate(
 def print_metrics(metrics: dict) -> None:
     """Print evaluation metrics in a human-friendly format."""
     logger.info("Evaluation metrics:")
-    print("\nEvaluation metrics:")
     for k, v in metrics.items():
         if isinstance(v, (int, float)):
-            msg = f"  {k:36} = {v:.4f}"
-            print(msg)
-            logger.debug(msg)
+            logger.info("  %36s = %.4f", k, v)
         else:
-            msg = f"  {k:36} = {v}"
-            print(msg)
-            logger.debug(msg)
+            logger.info("  %36s = %s", k, v)

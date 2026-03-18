@@ -1,0 +1,34 @@
+Task: Classify customer messages into designated support ticket categories.
+
+Objective: You must classify a customer's message into one of four designated categories — Incident, Request, Problem, or Change — according to the instructions and definitions provided below.
+
+Instructions:
+
+1. Classification Categories:
+   - **Incident**: A single and specific event indicating a breakdown, disruption, or degradation of service that impacts the user. 
+   - **Request**: An inquiry for information, access, or service, often for new features, updates, or services.
+   - **Problem**: An issue or difficulty impacting service usability, potentially associated with multiple incidents.
+   - **Change**: Any alteration, such as addition, modification, or removal, likely affecting the service, including updates or configuration modifications.
+
+2. Message Analysis:
+   - Each customer message will be tagged using the format {{customer_message}}.
+   - Your role is to assess this message, paying close attention to context and keywords, to determine the precise category it belongs to.
+
+3. Response Format:
+   - Provide only the category name as a single word: "Incident," "Request," "Problem," or "Change." Ensure no additional explanation or text accompanies your response.
+
+4. Classification Strategy:
+   - Identify pertinent keywords or phrases aligning closely with provided definitions.
+   - Use contextual clues that may suggest the necessity for troubleshooting, service changes, feature updates, or access requests.
+   - Apply your understanding of organizational processes and corresponding terminologies typically linked to these ticket categories.
+
+5. Clarifications and Examples:
+   - A request for updates to billing information or account setup configurations should be categorized as "Change."
+   - Reports of unresolved billing errors or duplicate charges are indicative of a "Problem."
+   - Requests or inquiries for service information or introductions of new features entail classification as "Request."
+   - Single occurrences impacting service are indicative of an "Incident."
+
+6. Consistency:
+   - Consistently follow the response format and classification strategy to align with expectations and accurately evaluate the customer's intent as reflected in their message content.
+
+By adhering to this framework, you will ensure reliably accurate and context-sensitive classification of customer support messages, facilitating streamlined service responses.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
 
 import mlflow
 
@@ -76,12 +75,36 @@ def _get_llm_client(config: Config):
         raise ValueError(f"Unsupported LLM provider: {config.llm_provider}")
 
 
+def _predict_once(
+    config: Config,
+    customer_message: str,
+    prompt_uri: str | None = None,
+    prompt_template: str | None = None,
+    client=None,
+) -> str:
+    """Execute one completion call without MLflow tracing decoration."""
+    llm_client = client or _get_llm_client(config)
+    tmpl = _get_prompt_template(config, prompt_uri=prompt_uri, prompt_template=prompt_template)
+    messages = _build_messages(tmpl, customer_message)
+
+    logger.debug(f"Calling {config.llm_provider} API with model {config.model_name}")
+    resp = llm_client.chat.completions.create(
+        model=config.model_name,
+        messages=messages,
+        temperature=0.0,
+        max_tokens=32,
+    )
+
+    return resp.choices[0].message.content.strip()
+
+
 @mlflow.trace(name="ticket_classifier", span_type="LLM")
 def predict(
     config: Config,
     customer_message: str,
     prompt_uri: str | None = None,
     prompt_template: str | None = None,
+    client=None,
 ) -> str:
     """Predict the ticket category for a single customer message.
 
@@ -102,20 +125,13 @@ def predict(
         )
         logger.debug(f"Customer message length: {len(customer_message)} chars")
 
-        client = _get_llm_client(config)
-
-        tmpl = _get_prompt_template(config, prompt_uri=prompt_uri, prompt_template=prompt_template)
-        messages = _build_messages(tmpl, customer_message)
-
-        logger.debug(f"Calling {config.llm_provider} API with model {config.model_name}")
-        resp = client.chat.completions.create(
-            model=config.model_name,
-            messages=messages,
-            temperature=0.0,
-            max_tokens=32,
+        result = _predict_once(
+            config,
+            customer_message,
+            prompt_uri=prompt_uri,
+            prompt_template=prompt_template,
+            client=client,
         )
-
-        result = resp.choices[0].message.content.strip()
         logger.info(f"Prediction successful: {result}")
         return result
         
@@ -133,6 +149,9 @@ def predict_from_inputs(
     config: Config,
     inputs: dict[str, str],
     prompt_uri: str | None = None,
+    prompt_template: str | None = None,
+    client=None,
+    traced: bool = True,
 ) -> str:
     """Wrapper for MLflow GenAI evaluation/optimization.
 
@@ -144,4 +163,19 @@ def predict_from_inputs(
     if customer_message is None:
         raise ValueError("Missing 'customer_message' in inputs")
 
-    return predict(config, customer_message, prompt_uri=prompt_uri)
+    if traced:
+        return predict(
+            config,
+            customer_message,
+            prompt_uri=prompt_uri,
+            prompt_template=prompt_template,
+            client=client,
+        )
+
+    return _predict_once(
+        config,
+        customer_message,
+        prompt_uri=prompt_uri,
+        prompt_template=prompt_template,
+        client=client,
+    )

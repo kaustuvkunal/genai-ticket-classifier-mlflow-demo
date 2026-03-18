@@ -12,14 +12,14 @@ An LLM-based support-ticket classification system.
 - **Problem** — Underlying/systemic issues causing multiple incidents (recurring bug)
 - **Change** — Planned updates, configurations, or version upgrades
 
-The system leverages the semantic understanding of LLMs to accurately classify tickets.
+The system leverages the semantic understanding of LLMs to accurately classify customer support tickets.
 ---
 
 ## Key Features
 
 ✅ **Flexible LLM Providers** — Switch between Groq or OpenAI at runtime   
 ✅ **MLflow Demo** — Register prompts, run evaluations, optimize prompts leveraging MlFlow
-✅ **CLI Tools** — Command-line interface for batch predictions and prompt management  
+✅ **CLI Tools** — Command line interface for batch predictions and prompt management  
 ✅ **Environment-based Config** — All settings via `.env` file for easy deployment  
 ✅ **No Backend Required** — Works standalone—no database or external server needed  
 

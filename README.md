@@ -11,8 +11,9 @@ An LLM-based IT support-ticket classification system.
 - **Request** — Routine inquiries and service requests (password reset, feature request)
 - **Problem** — Underlying/systemic issues causing multiple incidents (recurring bug)
 - **Change** — Planned updates, configurations, or version upgrades
-  
+
 The system leverages the semantic understanding of LLMs to accurately classify customer support tickets.
+
 ---
 
 ## Key Features

@@ -1,4 +1,5 @@
-"""Standalone Gradio app for the GenAI Ticket Classifier.
+"""
+Standalone Gradio app for the GenAI Ticket Classifier.
 
 This file is fully self-contained and can be deployed to Hugging Face Spaces.
 It classifies customer support messages into categories using a configurable LLM client.
@@ -11,7 +12,6 @@ from __future__ import annotations
 import os
 import runpy
 import logging
-from typing import Optional
 from pathlib import Path
 
 import gradio as gr
@@ -29,7 +29,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
-logger.debug("Initializing Gradio app")
 
 
 def _load_environment() -> Path | None:
@@ -53,28 +52,17 @@ def _load_environment() -> Path | None:
     return None
 
 
-def _split_csv_env(value: str | None) -> list[str]:
-    """Split a comma-separated env var into a cleaned list."""
-    if not value:
-        return []
-    return [item.strip().lower() for item in value.split(",") if item.strip()]
-
-
-def _provider_display_name(provider: str) -> str:
-    """Return the display name for a provider from env configuration."""
-    return os.getenv(
-        f"{provider.upper()}_DISPLAY_NAME",
-        provider.replace("_", " ").title(),
-    )
-
-
-_LOADED_ENV_PATH = _load_environment()
+_load_environment()
 
 # Load prompt from prompts/finalise_prompt.py — maintained by the user.
 _FINALISE_PROMPT_PATH = Path(__file__).parent / "prompts" / "finalise_prompt.py"
 PROMPT_TEMPLATE: str = runpy.run_path(str(_FINALISE_PROMPT_PATH))["PROMPT"]
 
-SUPPORTED_PROVIDER_KEYS = _split_csv_env(os.getenv("SUPPORTED_PROVIDERS"))
+SUPPORTED_PROVIDER_KEYS = [
+    item.strip().lower()
+    for item in (os.getenv("SUPPORTED_PROVIDERS") or "").split(",")
+    if item.strip()
+]
 DEFAULT_PROVIDER = (os.getenv("LLM_PROVIDER") or "").strip().lower()
 
 if DEFAULT_PROVIDER and DEFAULT_PROVIDER not in SUPPORTED_PROVIDER_KEYS:
@@ -92,29 +80,9 @@ DEFAULT_MODELS = {
     for provider in SUPPORTED_PROVIDER_KEYS
 }
 
-SUPPORTED_PROVIDERS = {
-    provider: (
-        f"{_provider_display_name(provider)} ({DEFAULT_MODELS[provider]})"
-        if DEFAULT_MODELS[provider]
-        else _provider_display_name(provider)
-    )
-    for provider in SUPPORTED_PROVIDER_KEYS
-}
-
-PROVIDER_LABEL_TO_KEY = {
-    label: provider for provider, label in SUPPORTED_PROVIDERS.items()
-}
-
 
 def load_config() -> dict:
     """Load configuration from environment variables."""
-    logger.debug("Loading configuration")
-
-    if _LOADED_ENV_PATH is not None:
-        logger.debug("Loaded environment from: %s", _LOADED_ENV_PATH)
-    else:
-        logger.debug("No .env file found, using environment variables")
-
     provider = (os.getenv("LLM_PROVIDER") or DEFAULT_PROVIDER or "").strip().lower()
     model = os.getenv("MODEL_NAME")
 
@@ -135,11 +103,6 @@ def load_config() -> dict:
         config["provider"],
         config["model_name"],
     )
-    logger.debug(
-        "Groq API key present: %s, OpenAI API key present: %s",
-        bool(os.getenv("GROQ_API_KEY")),
-        bool(os.getenv("OPENAI_API_KEY")),
-    )
     return config
 
 
@@ -149,10 +112,8 @@ def load_config() -> dict:
 
 def predict_with_groq(model: str, prompt: str, customer_message: str, api_key_override: str | None = None) -> str:
     """Call Groq API."""
-    logger.debug(f"Calling Groq API with model {model}")
     try:
         from groq import Groq
-        logger.debug("Groq client imported successfully")
 
         api_key = api_key_override or os.environ.get("GROQ_API_KEY")
         if not api_key:
@@ -163,7 +124,6 @@ def predict_with_groq(model: str, prompt: str, customer_message: str, api_key_ov
             {"role": "user", "content": customer_message},
         ]
         
-        logger.debug(f"Making Groq API request with message length: {len(customer_message)}")
         response = client.chat.completions.create(
             model=model,
             messages=messages,
@@ -172,48 +132,45 @@ def predict_with_groq(model: str, prompt: str, customer_message: str, api_key_ov
         )
         
         result = response.choices[0].message.content.strip()
-        logger.info(f"Groq prediction successful: {result}")
+        logger.info("Groq prediction successful: %s", result)
         return result
     except ImportError:
         logger.error("groq package not installed")
         return "Error: groq package not installed. Install with: pip install groq"
     except Exception as e:
-        logger.error(f"Groq API error: {type(e).__name__}: {e}")
+        logger.error("Groq API error: %s: %s", type(e).__name__, e)
         return f"Error: {str(e)}"
 
 
 def predict_with_openai(model: str, prompt: str, customer_message: str, api_key_override: str | None = None) -> str:
-    """Call OpenAI API."""
-    logger.debug(f"Calling OpenAI API with model {model}")
+    """Call OpenAI Responses API."""
     try:
         from openai import OpenAI
-        logger.debug("OpenAI client imported successfully")
 
         api_key = api_key_override or os.environ.get("OPENAI_API_KEY")
         if not api_key:
             return "Error: OPENAI_API_KEY not set in environment"
         client = OpenAI(api_key=api_key)
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": customer_message},
-        ]
-        
-        logger.debug(f"Making OpenAI API request with message length: {len(customer_message)}")
-        response = client.chat.completions.create(
+
+        response = client.responses.create(
             model=model,
-            messages=messages,
+            instructions=prompt,
+            input=customer_message,
             temperature=0.0,
-            max_tokens=32,
+            max_output_tokens=32,
         )
-        
-        result = response.choices[0].message.content.strip()
-        logger.info(f"OpenAI prediction successful: {result}")
+
+        result = (response.output_text or "").strip()
+        if not result:
+            return "Error: OpenAI response did not contain output text"
+
+        logger.info("OpenAI prediction successful: %s", result)
         return result
     except ImportError:
         logger.error("openai package not installed")
         return "Error: openai package not installed. Install with: pip install openai"
     except Exception as e:
-        logger.error(f"OpenAI API error: {type(e).__name__}: {e}")
+        logger.error("OpenAI API error: %s: %s", type(e).__name__, e)
         return f"Error: {str(e)}"
 
 
@@ -242,8 +199,6 @@ def predict(config: dict, customer_message: str, api_key_override: str | None = 
     provider = config["provider"].lower()
     model = config["model_name"]
     prompt = PROMPT_TEMPLATE
-    
-    logger.debug(f"Predicting with provider={provider}, model={model}, message_length={len(customer_message)}")
 
     if provider == "groq":
         logger.info("Using Groq provider for prediction")
@@ -254,7 +209,7 @@ def predict(config: dict, customer_message: str, api_key_override: str | None = 
         return predict_with_openai(model, prompt, customer_message, api_key_override=api_key_override)
 
     else:
-        error_msg = f"Unsupported provider '{provider}'. Supported: {', '.join(SUPPORTED_PROVIDERS.keys())}"
+        error_msg = f"Unsupported provider '{provider}'. Supported: {', '.join(SUPPORTED_PROVIDER_KEYS)}"
         logger.error(error_msg)
         return f"Error: {error_msg}"
 
@@ -263,18 +218,7 @@ def predict(config: dict, customer_message: str, api_key_override: str | None = 
 # Gradio Interface
 # ============================================================================
 
-def _build_auth() -> Optional[tuple[str, str]]:
-    """Build authentication credentials from environment variables."""
-    username = os.getenv("USERNAME")
-    password = os.getenv("PASSWD")
-    if username and password:
-        logger.info("Gradio authentication enabled")
-        return (username, password)
-    logger.info("Gradio authentication disabled (USERNAME/PASSWD not set)")
-    return None
-
-
-def create_app(config: Optional[dict] = None) -> gr.Blocks:
+def create_app(config: dict | None = None) -> gr.Blocks:
     """Create and return the Gradio app.
     
     Args:
@@ -285,19 +229,13 @@ def create_app(config: Optional[dict] = None) -> gr.Blocks:
     """
     logger.info("Creating Gradio application")
     config = config or load_config()
-    logger.debug("App config: provider=%s, model=%s", config["provider"], config["model_name"])
 
     def classify(customer_message: str) -> str:
         """Classify using the environment-backed app configuration."""
-        if not customer_message.strip():
-            return ""
-
         return predict(config, customer_message)
 
-    logger.debug("Building Gradio interface")
     with gr.Blocks(
-        title="GenAI Ticket Classifier",
-        css="body { font-family: system-ui; }"
+        title="GenAI Ticket Classifier"
     ) as demo:
         gr.Markdown("""
         # 🎫 GenAI Support Ticket Classifier
@@ -306,21 +244,18 @@ def create_app(config: Optional[dict] = None) -> gr.Blocks:
         """)
 
         gr.Markdown("### Classify Message")
+        
         txt = gr.TextArea(
             label="Customer message",
             placeholder="Describe the issue or request...",
             lines=6
         )
+        
         classify_btn = gr.Button("Classify", variant="primary")
+        
         out = gr.Textbox(
             label="Predicted category",
             interactive=False
-        )
-
-        txt.change(
-            fn=classify,
-            inputs=txt,
-            outputs=out
         )
 
         classify_btn.click(
@@ -337,13 +272,11 @@ def create_app(config: Optional[dict] = None) -> gr.Blocks:
 # ============================================================================
 
 # This is what Hugging Face Spaces looks for
-logger.debug("Creating app instance for HF Spaces")
 app = create_app()
-auth = _build_auth()
 
 # For local development/testing
 if __name__ == "__main__":
     logger.info("Starting Gradio app in local mode")
     logger.info("Launching app on http://localhost:7860")
     app.queue()
-    app.launch(auth=auth, share=False)
+    app.launch(share=False)

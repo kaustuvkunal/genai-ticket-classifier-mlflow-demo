@@ -2,16 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-
 from .config import Config
 
-
-# Absolute path to the canonical finalised prompt maintained by the user.
-_FINALISE_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "finalise_prompt.py"
-
-PROMPT_TEMPLATE = """\
+# Local fallback used when a registered MLflow prompt URI is not supplied.
+BASE_PROMPT_TEMPLATE = """\
 Classify the following customer support message into **exactly one** of these categories:
 
 - Incident  : unexpected issue requiring immediate attention
@@ -28,6 +22,6 @@ No explanation. No extra text.
 """
 
 
-def load_prompt_uri(config: Config, version: Optional[str] = "latest") -> str:
+def load_prompt_uri(config: Config, version: str = "latest") -> str:
     """Build the MLflow URI for the registered prompt."""
     return f"prompts:/{config.prompt_template_name}@{version}"

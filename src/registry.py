@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import mlflow
 
 from .config import Config
-from .prompt import PROMPT_TEMPLATE
+from . import prompt as prompt_module
 
 logger = logging.getLogger(__name__)
 
@@ -24,24 +24,24 @@ class RegisteredPrompt:
 
 def register_prompt(config: Config, commit_message: str = "Register prompt") -> RegisteredPrompt:
     """Register or update the prompt in the MLflow tracking server."""
-    logger.info(f"Registering prompt: {config.prompt_template_name}")
-    logger.debug(f"Commit message: {commit_message}")
-    logger.debug(f"MLflow tracking URI: {config.mlflow_tracking_uri}")
+    logger.info("Registering prompt: %s", config.prompt_template_name)
+    logger.debug("Commit message: %s", commit_message)
+    logger.debug("MLflow tracking URI: %s", config.mlflow_tracking_uri)
 
     mlflow.set_tracking_uri(config.mlflow_tracking_uri)
-    logger.debug(f"Set MLflow tracking URI")
-    
-    mlflow.set_experiment(config.experiment_name)
-    logger.debug(f"Set experiment: {config.experiment_name}")
+    logger.debug("Set MLflow tracking URI")
 
-    logger.debug(f"Registering prompt with template size: {len(PROMPT_TEMPLATE)} chars")
+    mlflow.set_experiment(config.experiment_name)
+    logger.debug("Set experiment: %s", config.experiment_name)
+
+    logger.debug("Registering prompt with template size: %s chars", len(prompt_module.BASE_PROMPT_TEMPLATE))
     prompt = mlflow.genai.register_prompt(
         name=config.prompt_template_name,
-        template=PROMPT_TEMPLATE,
+        template=prompt_module.BASE_PROMPT_TEMPLATE,
         commit_message=commit_message,
     )
-    
-    logger.info(f"Prompt registered successfully: {prompt.name} (version {prompt.version})")
-    logger.debug(f"Prompt URI: {prompt.uri}")
+
+    logger.info("Prompt registered successfully: %s (version %s)", prompt.name, prompt.version)
+    logger.debug("Prompt URI: %s", prompt.uri)
 
     return RegisteredPrompt(name=prompt.name, uri=prompt.uri, version=prompt.version)

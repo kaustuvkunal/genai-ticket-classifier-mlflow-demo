@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 import mlflow
 
@@ -33,7 +32,7 @@ def evaluate(
     config: Config,
     data,
     prompt_uri: str | None = None,
-    additional_scorers: List = None,
+    additional_scorers: list | None = None,
 ) -> dict:
     """Run a baseline evaluation of the current prompt + model.
 
@@ -48,34 +47,39 @@ def evaluate(
             default ``exact_category_match`` scorer.
     """
     mlflow.set_tracking_uri(config.mlflow_tracking_uri)
-    logger.debug(f"MLflow tracking URI: {config.mlflow_tracking_uri}")
+    logger.debug("MLflow tracking URI: %s", config.mlflow_tracking_uri)
 
     requested_prompt_uri = prompt_uri or load_prompt_uri(config, version="latest")
     effective_prompt_uri = _resolve_prompt_uri(requested_prompt_uri)
 
     logger.info(
-        f"Starting evaluation with provider={config.llm_provider}, "
-        f"model={config.model_name}, prompt_uri={effective_prompt_uri}"
+        "Starting evaluation with provider=%s, model=%s, prompt_uri=%s",
+        config.llm_provider,
+        config.model_name,
+        effective_prompt_uri,
     )
     total_samples = len(data) if hasattr(data, "__len__") else None
-    logger.debug(f"Data size: {total_samples if total_samples is not None else 'unknown'} samples")
+    logger.debug(
+        "Data size: %s samples",
+        total_samples if total_samples is not None else "unknown",
+    )
 
     mlflow.set_experiment(config.experiment_name)
-    logger.debug(f"Experiment: {config.experiment_name}")
+    logger.debug("Experiment: %s", config.experiment_name)
 
     scorers = [exact_category_match]
     if additional_scorers:
-        logger.debug(f"Adding {len(additional_scorers)} custom scorers")
+        logger.debug("Adding %s custom scorers", len(additional_scorers))
         scorers.extend(additional_scorers)
 
     # End any lingering active run so this evaluation is fully isolated.
     mlflow.end_run()
 
     run_name = f"evaluate-{effective_prompt_uri}"
-    logger.debug(f"Starting fresh MLflow run: {run_name}")
+    logger.debug("Starting fresh MLflow run: %s", run_name)
 
     logger.debug("Preloading prompt template and LLM client for evaluation")
-    prompt_template = _get_prompt_template(config, prompt_uri=effective_prompt_uri)
+    prompt_template = _get_prompt_template(prompt_uri=effective_prompt_uri)
     llm_client = _get_llm_client(config)
     progress = {"completed": 0}
 
@@ -104,7 +108,7 @@ def evaluate(
     # NOTE: The lambda parameter name *must* match the key in the `inputs` dict
     # of the evaluation dataset ("customer_message") so that MLflow can wire
     # the value through correctly.
-    logger.debug(f"Running evaluation with {len(scorers)} scorers")
+    logger.debug("Running evaluation with %s scorers", len(scorers))
     with mlflow.start_run(run_name=run_name):
         result = mlflow.genai.evaluate(
             data=data,
@@ -112,8 +116,8 @@ def evaluate(
             scorers=scorers,
         )
 
-    logger.info(f"Evaluation completed successfully")
-    logger.debug(f"Metrics: {result.metrics}")
+    logger.info("Evaluation completed successfully")
+    logger.debug("Metrics: %s", result.metrics)
     return result.metrics
 
 

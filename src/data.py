@@ -27,13 +27,13 @@ def load_eval_data(limit: int | None = None) -> pd.DataFrame:
         A DataFrame with columns ``inputs`` and ``expectations``, compatible
         with ``mlflow.genai.evaluate``.
     """
-    logger.debug(f"Loading evaluation data from {_LOCAL_GOLD_CSV}")
+    logger.debug("Loading evaluation data from %s", _LOCAL_GOLD_CSV)
     gold_df = pd.read_csv(_LOCAL_GOLD_CSV)
     if limit is not None:
         gold_df = gold_df.head(limit)
-        logger.info(f"Limiting evaluation to {len(gold_df)} samples (--limit {limit})")
+        logger.info("Limiting evaluation to %s samples (--limit %s)", len(gold_df), limit)
     else:
-        logger.info(f"Loaded {len(gold_df)} evaluation samples from local CSV")
+        logger.info("Loaded %s evaluation samples from local CSV", len(gold_df))
 
     eval_df = pd.DataFrame(
         [

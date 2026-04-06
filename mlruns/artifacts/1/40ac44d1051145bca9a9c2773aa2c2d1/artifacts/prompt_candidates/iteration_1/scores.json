@@ -1,0 +1,6 @@
+{
+  "aggregate": 0.6875,
+  "per_scorer": {
+    "class_match": 0.6875
+  }
+}

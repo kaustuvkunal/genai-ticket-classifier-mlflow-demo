@@ -76,10 +76,12 @@ Demo of MLflow capabilities - prompt registration, evaluation and optimization
 ### 1. Start MLflow Server
 
 ```bash
-mlflow server \
-  --backend-store-uri sqlite:///mlflow.db \
-  --default-artifact-root ./mlruns \
+
+ mlflow server \
+  --backend-store-uri sqlite:///experiments/mlflow.db \
+  --default-artifact-root ./experiments/mlruns \
   --host 127.0.0.1 --port 5000
+ 
 ```
 
 ### 2. Register a Prompt 

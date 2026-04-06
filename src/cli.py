@@ -12,9 +12,16 @@ from .data import load_eval_data
 from .evaluate import evaluate, print_metrics
 from .optimize import optimize_prompt
 from .registry import register_prompt
-from .predict import predict
+from .predict import predict as predict_ticket
 
 logger = logging.getLogger(__name__)
+
+
+def _exit_with_error(command_name: str, error: Exception) -> None:
+    """Print a consistent error message and exit the CLI command."""
+    logger.error("%s failed: %s: %s", command_name, type(error).__name__, error)
+    click.echo(f"Error: {error}", err=True)
+    sys.exit(1)
 
 
 @click.group()
@@ -42,16 +49,14 @@ def register_prompt_cmd(commit_message: str) -> None:
 
     try:
         config = load_config()
-        logger.debug(f"Config loaded: provider={config.llm_provider}")
+        logger.debug("Config loaded: provider=%s", config.llm_provider)
         
         prompt = register_prompt(config, commit_message=commit_message)
         click.echo(f"Registered prompt: {prompt.name} (version {prompt.version})")
         click.echo(f"Prompt URI: {prompt.uri}")
-        logger.info(f"register-prompt completed successfully")
+        logger.info("register-prompt completed successfully")
     except Exception as e:
-        logger.error(f"register-prompt failed: {type(e).__name__}: {e}")
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+        _exit_with_error("register-prompt", e)
 
 
 @main.command("evaluate")
@@ -79,11 +84,11 @@ def evaluate_cmd(prompt_uri: str, skip_data: bool, limit: int | None) -> None:
     """Run baseline evaluation on the canonical evaluation dataset."""
     logger.info("Executing evaluate command")
     if prompt_uri:
-        logger.info(f"Using prompt URI: {prompt_uri}")
+        logger.info("Using prompt URI: %s", prompt_uri)
 
     try:
         config = load_config()
-        logger.debug(f"Config loaded: provider={config.llm_provider}")
+        logger.debug("Config loaded: provider=%s", config.llm_provider)
 
         if skip_data:
             click.echo("Skipping data load (no evaluation data).")
@@ -92,16 +97,14 @@ def evaluate_cmd(prompt_uri: str, skip_data: bool, limit: int | None) -> None:
 
         logger.debug("Loading evaluation data")
         data = load_eval_data(limit=limit)
-        logger.debug(f"Evaluation data loaded: {len(data)} samples")
+        logger.debug("Evaluation data loaded: %s samples", len(data))
 
         logger.debug("Starting evaluation")
         metrics = evaluate(config=config, data=data, prompt_uri=prompt_uri)
         print_metrics(metrics)
         logger.info("evaluate completed successfully")
     except Exception as e:
-        logger.error(f"evaluate failed: {type(e).__name__}: {e}")
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+        _exit_with_error("evaluate", e)
 
 
 @main.command("optimize")
@@ -127,15 +130,19 @@ def evaluate_cmd(prompt_uri: str, skip_data: bool, limit: int | None) -> None:
 def optimize_cmd(prompt_uri: str | None, prompt_version: str, max_metric_calls: int) -> None:
     """Optimize the registered prompt using MLflow GenAI optimization."""
     logger.info("Executing optimize command")
-    logger.debug(f"Options: prompt_version={prompt_version}, max_metric_calls={max_metric_calls}")
+    logger.debug(
+        "Options: prompt_version=%s, max_metric_calls=%s",
+        prompt_version,
+        max_metric_calls,
+    )
 
     try:
         config = load_config()
-        logger.debug(f"Config loaded: provider={config.llm_provider}")
-        
+        logger.debug("Config loaded: provider=%s", config.llm_provider)
+
         logger.debug("Loading training data")
         data = load_eval_data()
-        logger.debug(f"Training data loaded: {len(data)} samples")
+        logger.debug("Training data loaded: %s samples", len(data))
 
         logger.debug("Starting prompt optimization")
         optimized_uri = optimize_prompt(
@@ -149,9 +156,7 @@ def optimize_cmd(prompt_uri: str | None, prompt_version: str, max_metric_calls: 
         click.echo(f"Optimized prompt URI: {optimized_uri}")
         logger.info("optimize completed successfully")
     except Exception as e:
-        logger.error(f"optimize failed: {type(e).__name__}: {e}")
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
+        _exit_with_error("optimize", e)
 
 
 @main.command("predict")
@@ -173,27 +178,20 @@ def predict_cmd(message: tuple[str, ...], prompt_uri: str | None) -> None:
             raise click.UsageError("Provide a customer message to classify.")
 
         customer_message = " ".join(message).strip()
-        logger.debug(f"Message to predict: {len(customer_message)} chars")
+        logger.debug("Message to predict: %s chars", len(customer_message))
 
         config = load_config()
-        logger.debug(f"Config loaded: provider={config.llm_provider}")
+        logger.debug("Config loaded: provider=%s", config.llm_provider)
 
         if prompt_uri:
             click.echo(f"Prompt : {prompt_uri}")
         else:
-            from .prompt import _FINALISE_PROMPT_PATH
-            click.echo(f"Prompt : {_FINALISE_PROMPT_PATH} (local fallback)")
+            click.echo("Prompt : src/prompt.py (local fallback)")
 
         logger.debug("Starting prediction")
-        prediction = predict(config, customer_message, prompt_uri=prompt_uri)
+        prediction = predict_ticket(config, customer_message, prompt_uri=prompt_uri)
 
         click.echo(f"Result : {prediction}")
-        logger.info(f"Prediction: {prediction}")
+        logger.info("Prediction: %s", prediction)
     except Exception as e:
-        logger.error(f"predict failed: {type(e).__name__}: {e}")
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
+        _exit_with_error("predict", e)

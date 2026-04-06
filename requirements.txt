@@ -5,9 +5,14 @@ gradio>=4.0
 # MLflow (for CLI with prompt registration/evaluation)
 mlflow==3.10.0
 
+# optimizer
+gepa>=0.0.26
+litellm==1.82.6
+
 # LLM Providers
 groq>=0.4.0              # For Groq API
-openai>=1.0             # For OpenAI API
+openai>=1.0
+#gemini>=0.1.0            # For Google Gemini API
 
 # Data processing (for MLflow evaluation)
 pandas>=2.0
@@ -17,3 +22,10 @@ click>=8.0
 
 # Development & testing
 pytest>=8.0
+
+# jupyter kernal (for interactive development)
+ipykernel==7.2.0
+jupyter==1.1.1
+ipyparallel==9.1.0
+ipywidgets==8.0.6
+ 

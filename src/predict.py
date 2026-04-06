@@ -8,7 +8,7 @@ import os
 import mlflow
 
 from .config import Config
-from .prompt import PROMPT_TEMPLATE
+from .prompt import BASE_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,6 @@ def _build_messages(prompt_template: str, customer_message: str) -> list[dict[st
 
 
 def _get_prompt_template(
-    config: Config,
     prompt_uri: str | None = None,
     prompt_template: str | None = None,
 ) -> str:
@@ -32,7 +31,7 @@ def _get_prompt_template(
     Priority order:
     1. ``prompt_template`` — raw string passed directly (no MLflow needed)
     2. ``prompt_uri`` — fetched from the MLflow registry
-    3. Inline ``PROMPT_TEMPLATE`` from ``src/prompt.py``
+    3. Inline ``BASE_PROMPT_TEMPLATE`` from ``src/prompt.py``
     """
     if prompt_template:
         logger.debug("Using explicitly provided prompt template")
@@ -43,8 +42,8 @@ def _get_prompt_template(
         logger.debug(f"Successfully loaded prompt from MLflow (uri={prompt_uri})")
         return prompt_obj.template
     else:
-        logger.debug("No prompt URI provided — using inline PROMPT_TEMPLATE from src/prompt.py")
-        return PROMPT_TEMPLATE
+        logger.debug("No prompt URI provided — using inline BASE_PROMPT_TEMPLATE from src/prompt.py")
+        return BASE_PROMPT_TEMPLATE
 
 
 def _get_llm_client(config: Config):
@@ -84,7 +83,7 @@ def _predict_once(
 ) -> str:
     """Execute one completion call without MLflow tracing decoration."""
     llm_client = client or _get_llm_client(config)
-    tmpl = _get_prompt_template(config, prompt_uri=prompt_uri, prompt_template=prompt_template)
+    tmpl = _get_prompt_template(prompt_uri=prompt_uri, prompt_template=prompt_template)
     messages = _build_messages(tmpl, customer_message)
 
     logger.debug(f"Calling {config.llm_provider} API with model {config.model_name}")
@@ -116,7 +115,7 @@ def predict(
         prompt_template: Optional raw prompt string. When provided, MLflow is
             bypassed entirely and this template is used directly.
 
-    Priority: prompt_template > prompt_uri > inline PROMPT_TEMPLATE.
+    Priority: prompt_template > prompt_uri > inline BASE_PROMPT_TEMPLATE.
     """
     try:
         logger.info(

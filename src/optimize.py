@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import mlflow
 
@@ -42,29 +41,31 @@ def optimize_prompt(
         The URI of the optimized prompt.
     """
     logger.info(
-        f"Starting prompt optimization with provider={config.llm_provider}, "
-        f"max_metric_calls={max_metric_calls}"
+        "Starting prompt optimization with provider=%s, max_metric_calls=%s",
+        config.llm_provider,
+        max_metric_calls,
     )
     logger.debug(
-        f"Prompt version: {prompt_version}, "
-        f"progress_bar: {display_progress_bar}"
+        "Prompt version: %s, progress_bar: %s",
+        prompt_version,
+        display_progress_bar,
     )
 
     mlflow.set_tracking_uri(config.mlflow_tracking_uri)
-    logger.debug(f"MLflow tracking URI: {config.mlflow_tracking_uri}")
-    
-    mlflow.set_experiment(config.experiment_name)
-    logger.debug(f"Experiment: {config.experiment_name}")
+    logger.debug("MLflow tracking URI: %s", config.mlflow_tracking_uri)
 
-    # Set reflection model based on configured LLM provider
+    mlflow.set_experiment(config.experiment_name)
+    logger.debug("Experiment: %s", config.experiment_name)
+
+    # Use a stronger reflection model when optimizing prompts than the serving model.
     if config.llm_provider == "groq":
         reflection_model = "groq:/llama-3.3-70b-versatile"
     elif config.llm_provider == "openai":
         reflection_model = "openai:/gpt-4o"
     else:
         reflection_model = f"{config.llm_provider}:/{config.model_name}"
-    
-    logger.debug(f"Reflection model: {reflection_model}")
+
+    logger.debug("Reflection model: %s", reflection_model)
 
     optimizer = GepaPromptOptimizer(
         reflection_model=reflection_model,
@@ -73,15 +74,14 @@ def optimize_prompt(
     )
 
     prompt_uri = prompt_uri or load_prompt_uri(config, version=prompt_version)
-    logger.debug(f"Input prompt URI: {prompt_uri}")
+    logger.debug("Input prompt URI: %s", prompt_uri)
 
     # End any lingering active run so this optimization is fully isolated.
     mlflow.end_run()
 
     run_name = f"optimize-{prompt_uri}"
-    logger.debug(f"Starting fresh MLflow run: {run_name}")
-
-    logger.debug(f"Starting optimization process")
+    logger.debug("Starting fresh MLflow run: %s", run_name)
+    logger.debug("Starting optimization process")
     with mlflow.start_run(run_name=run_name):
         opt_result = mlflow.genai.optimize_prompts(
             predict_fn=lambda customer_message: predict_from_inputs(
@@ -94,7 +94,36 @@ def optimize_prompt(
         )
 
     optimized_prompt = opt_result.optimized_prompts[0]
-    logger.info(f"Optimization completed successfully")
-    logger.info(f"Optimized prompt URI: {optimized_prompt.uri}")
+    original_prompt = mlflow.genai.load_prompt(prompt_uri)
+
+    original_template = (getattr(original_prompt, "template", "") or "").strip()
+    optimized_template = (getattr(optimized_prompt, "template", "") or "").strip()
+
+    if original_template == optimized_template:
+        logger.warning(
+            "Optimization produced no prompt template changes. "
+            "MLflow may still register a new version even when content is unchanged."
+        )
+
+    run_id = getattr(opt_result, "run_id", None)
+    if run_id:
+        run_metrics = mlflow.get_run(run_id).data.metrics
+        initial_score = run_metrics.get("initial_eval_score.accuracy")
+        final_score = run_metrics.get("final_eval_score.accuracy")
+        if initial_score is not None and final_score is not None:
+            logger.info(
+                "Optimization accuracy delta (final - initial): %.6f",
+                final_score - initial_score,
+            )
+            if final_score <= initial_score:
+                logger.warning(
+                    "No accuracy improvement detected from prompt optimization "
+                    "(initial=%.6f, final=%.6f).",
+                    initial_score,
+                    final_score,
+                )
+
+    logger.info("Optimization completed successfully")
+    logger.info("Optimized prompt URI: %s", optimized_prompt.uri)
 
     return optimized_prompt.uri

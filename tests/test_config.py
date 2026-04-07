@@ -34,11 +34,13 @@ def test_load_config_openai_provider(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("MODEL_NAME", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL_NAME", raising=False)
 
     cfg = load_config()
 
     assert cfg.llm_provider == "openai"
-    assert cfg.model_name == "gpt-4"  # Default model for OpenAI
+    assert cfg.model_name == "gpt-4o"  # Default from OPENAI_MODEL_NAME fallback
 
 
 def test_load_config_openai_missing_key(monkeypatch, tmp_path):
@@ -80,6 +82,7 @@ def test_load_config_custom_model_name(monkeypatch):
 def test_load_config_defaults(monkeypatch):
     """Test default values when env vars are not set."""
     monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_PROVIDER", "groq")  # Pin provider so .env value doesn't interfere
     monkeypatch.delenv("PROMPT_NAME", raising=False)
     monkeypatch.delenv("MLFLOW_EXPERIMENT", raising=False)
 
@@ -87,7 +90,7 @@ def test_load_config_defaults(monkeypatch):
 
     assert cfg.prompt_template_name == "support-ticket-classifier-prompt"
     assert cfg.experiment_name == "Support_Ticket_Classification_project"
-    assert cfg.llm_provider == "groq"  # Default provider
+    assert cfg.llm_provider == "groq"  # Explicitly pinned above
 
 
 def test_config_api_keys_not_stored(monkeypatch):

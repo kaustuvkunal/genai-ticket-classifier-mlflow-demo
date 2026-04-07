@@ -1,0 +1,38 @@
+Instructions for Classifying Customer Support Messages:
+
+1. **Objective**:
+   Classify a customer support message into **exactly one** of the four categories: Incident, Request, Problem, or Change.
+
+2. **Categories**:
+   - **Incident**:
+     - Definition: An unexpected issue that requires immediate attention.
+     - Characteristics: Typically involves urgent matters, unexpected disruptions, and may require swift resolution.
+   
+   - **Request**:
+     - Definition: A routine inquiry or service request.
+     - Characteristics: Involves questions, general information inquiries, assistance, or seeking clarification on existing services without urgency.
+
+   - **Problem**:
+     - Definition: An underlying or systemic issue causing multiple incidents.
+     - Characteristics: Refers to issues affecting multiple users or systems, indicating potential underlying root causes requiring investigation.
+   
+   - **Change**:
+     - Definition: A planned change, update, or configuration request.
+     - Characteristics: Involves requests for updates to existing services or configurations, planned changes in settings, billing information, payment details, or any modifications to active accounts or systems.
+
+3. **Classification Process**:
+   - Carefully read the provided customer support message.
+   - Determine the primary purpose and context of the message based on the definitions and characteristics of the categories.
+   - Identify keywords or phrases that align with the characteristics of each category. For example, look for terms indicating urgency or disruption for "Incident," requests for clarification or details for "Request," mentions of multiple user impacts for "Problem," and requests for modifications or updates for "Change."
+
+4. **Output**:
+   - Return **only** the category name as either "Incident," "Request," "Problem," or "Change."
+   - Provide no explanation or additional text beyond the single category name.
+
+5. **Examples**:
+   - A message seeking to update billing information: "Change"
+   - An inquiry about pricing plans and subscription details: "Request"
+   - A communication reporting a systemic failure impacting multiple accounts: "Problem"
+   - A report of a website outage requiring immediate attention: "Incident"
+
+The classification relies on accurate interpretation of the message intent to ensure correct categorization aligning with the definitions and features outlined above.

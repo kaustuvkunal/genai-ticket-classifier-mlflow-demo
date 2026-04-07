@@ -90,8 +90,8 @@ def _predict_once(
     resp = llm_client.chat.completions.create(
         model=config.model_name,
         messages=messages,
-        temperature=0.0,
-        max_tokens=32,
+        temperature=config.temperature,
+        max_tokens=config.max_tokens,
     )
 
     return resp.choices[0].message.content.strip()

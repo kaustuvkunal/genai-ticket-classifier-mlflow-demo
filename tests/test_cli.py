@@ -120,7 +120,7 @@ def test_predict_cmd_missing_message(cli_runner):
 @patch("src.cli.load_config")
 def test_commands_handle_config_errors(mock_config, cli_runner):
     """Test that commands handle config loading errors gracefully."""
-    mock_config.side_effect = Exception("Config error")
+    mock_config.side_effect = RuntimeError("Config error")
     
     # Should exit with error code, not crash
     result = cli_runner.invoke(evaluate_cmd, catch_exceptions=False)

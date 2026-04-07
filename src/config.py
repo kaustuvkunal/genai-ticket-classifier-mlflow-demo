@@ -12,26 +12,34 @@ from dotenv import load_dotenv
 logger = logging.getLogger(__name__)
 
 SUPPORTED_PROVIDERS = {"groq", "openai"}
-DEFAULT_MODEL_BY_PROVIDER = {
-    "groq": "llama-3.3-70b-versatile",
-    "openai": "gpt-4",
-}
 
 
 @dataclass(frozen=True)
 class Config:
     """Runtime configuration for the ticket classifier demo.
 
-    API keys are intentionally excluded to prevent accidental exposure via
-    MLflow traces, logging, or repr serialization.  They are read directly
-    from environment variables at the point of use.
+    All values are sourced from environment variables (via .env).  API keys
+    are intentionally excluded to prevent accidental exposure via MLflow
+    traces, logging, or repr serialization — they are read at the point of
+    use inside the LLM client factory.
     """
 
+    # Provider / model identity
     llm_provider: str
-    mlflow_tracking_uri: str
     model_name: str
-    prompt_template_name: str
+    reflection_model: str       # stronger model used by the optimizer
+
+    # MLflow settings
+    mlflow_tracking_uri: str
     experiment_name: str
+    prompt_template_name: str
+
+    # Optimization settings
+    max_metric_calls: int       # MAX_METRIC_CALLS
+
+    # Inference settings
+    temperature: float          # LLM_TEMPERATURE
+    max_tokens: int             # LLM_MAX_TOKENS
 
 
 def load_config(env_path: str | None = None) -> Config:
@@ -80,19 +88,30 @@ def load_config(env_path: str | None = None) -> Config:
             "Supported providers: groq, openai"
         )
 
-    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
-    model_name = os.getenv("MODEL_NAME") or DEFAULT_MODEL_BY_PROVIDER.get(llm_provider, "")
+    # Model name: generic MODEL_NAME takes priority, then provider-specific vars.
+    if llm_provider == "groq":
+        model_name = os.getenv("MODEL_NAME") or os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
+        _reflection_base = os.getenv("GROQ_REFLECTION_MODEL", "llama-3.3-70b-versatile")
+        reflection_model = f"groq:/{_reflection_base}"
+    else:  # openai
+        model_name = os.getenv("MODEL_NAME") or os.getenv("OPENAI_MODEL_NAME", "gpt-4o")
+        _reflection_base = os.getenv("OPENAI_REFLECTION_MODEL", "gpt-4o")
+        reflection_model = f"openai:/{_reflection_base}"
 
-    prompt_template_name = os.getenv("PROMPT_NAME") or "support-ticket-classifier-prompt"
-    experiment_name = os.getenv("MLFLOW_EXPERIMENT") or "Support_Ticket_Classification_project"
+    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+    experiment_name = os.getenv("MLFLOW_EXPERIMENT", "Support_Ticket_Classification_project")
+    prompt_template_name = os.getenv("PROMPT_NAME", "support-ticket-classifier-prompt")
+
+    max_metric_calls = int(os.getenv("MAX_METRIC_CALLS", "64"))
+    temperature = float(os.getenv("LLM_TEMPERATURE", "0.0"))
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "32"))
 
     logger.info("Configuration loaded successfully")
     logger.debug(
-        "Config: provider=%s, model=%s, prompt_name=%s, experiment=%s",
-        llm_provider,
-        model_name,
-        prompt_template_name,
-        experiment_name,
+        "Config: provider=%s, model=%s, prompt_name=%s, experiment=%s, "
+        "max_metric_calls=%s, temperature=%s, max_tokens=%s",
+        llm_provider, model_name, prompt_template_name, experiment_name,
+        max_metric_calls, temperature, max_tokens,
     )
 
     # API keys are NOT stored in Config — they are read from environment
@@ -100,8 +119,12 @@ def load_config(env_path: str | None = None) -> Config:
     # MLflow traces, logging, or any other serialization path.
     return Config(
         llm_provider=llm_provider,
-        mlflow_tracking_uri=mlflow_tracking_uri,
         model_name=model_name,
-        prompt_template_name=prompt_template_name,
+        reflection_model=reflection_model,
+        mlflow_tracking_uri=mlflow_tracking_uri,
         experiment_name=experiment_name,
+        prompt_template_name=prompt_template_name,
+        max_metric_calls=max_metric_calls,
+        temperature=temperature,
+        max_tokens=max_tokens,
     )

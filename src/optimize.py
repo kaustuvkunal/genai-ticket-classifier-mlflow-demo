@@ -21,7 +21,7 @@ def optimize_prompt(
     train_data,
     prompt_uri: str | None = None,
     prompt_version: str = "latest",
-    max_metric_calls: int = 400,
+    max_metric_calls: int | None = None,
     display_progress_bar: bool = True,
 ) -> str:
     """Optimize the registered prompt via MLflow GenAI prompt optimization.
@@ -34,16 +34,19 @@ def optimize_prompt(
             ``prompt_version`` is ignored.
         prompt_version: Version alias used when ``prompt_uri`` is not given
             (default: ``"latest"``).
-        max_metric_calls: Maximum scorer calls during optimization.
+        max_metric_calls: Override for the maximum scorer calls.  When
+            ``None``, the value is taken from ``config.max_metric_calls``
+            (i.e. ``MAX_METRIC_CALLS`` in ``.env``).
         display_progress_bar: Whether to show a progress bar.
 
     Returns:
         The URI of the optimized prompt.
     """
+    effective_max_calls = max_metric_calls if max_metric_calls is not None else config.max_metric_calls
     logger.info(
         "Starting prompt optimization with provider=%s, max_metric_calls=%s",
         config.llm_provider,
-        max_metric_calls,
+        effective_max_calls,
     )
     logger.debug(
         "Prompt version: %s, progress_bar: %s",
@@ -57,19 +60,14 @@ def optimize_prompt(
     mlflow.set_experiment(config.experiment_name)
     logger.debug("Experiment: %s", config.experiment_name)
 
-    # Use a stronger reflection model when optimizing prompts than the serving model.
-    if config.llm_provider == "groq":
-        reflection_model = "groq:/llama-3.3-70b-versatile"
-    elif config.llm_provider == "openai":
-        reflection_model = "openai:/gpt-4o"
-    else:
-        reflection_model = f"{config.llm_provider}:/{config.model_name}"
-
+    # Reflection model is configured per-provider in GROQ_REFLECTION_MODEL /
+    # OPENAI_REFLECTION_MODEL env vars (loaded into config.reflection_model).
+    reflection_model = config.reflection_model
     logger.debug("Reflection model: %s", reflection_model)
 
     optimizer = GepaPromptOptimizer(
         reflection_model=reflection_model,
-        max_metric_calls=max_metric_calls,
+        max_metric_calls=effective_max_calls,
         display_progress_bar=display_progress_bar,
     )
 

@@ -112,7 +112,7 @@ To evaluate a **specific registered prompt version**:
 Uses the **inline prompt*** for prediction from `src/prompt.py` (default — no MLflow server required):
 
 ```bash
-python3 -m src.cli predict "My service is down"
+python3 -m src.cli predict "Please update my address"
 ```
 
 Uses a **specific registered prompt version** for prediction from the MLflow registry:

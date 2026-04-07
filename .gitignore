@@ -10,7 +10,8 @@ src/.DS_Store
 *.so
 
 # mlflow
-./mlruns
+./experiments/
+./mlruns/
 
 # Distribution / packaging
 .Python

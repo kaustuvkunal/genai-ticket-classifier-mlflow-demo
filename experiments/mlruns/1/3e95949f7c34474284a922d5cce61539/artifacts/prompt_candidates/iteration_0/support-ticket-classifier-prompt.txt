@@ -1,7 +1,0 @@
-
-1) "Incident" - Unexpected issue requiring immediate attention
-2) "Request" - Routine inquiry or service request
-3) "Problem" - Underlying issue causing multiple incidents
-4) "Change" - Planned change or update
-
-Respond ONLY with the category name - Incident, Request, Problem, or Change 

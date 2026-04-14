@@ -10,7 +10,7 @@ src/.DS_Store
 *.so
 
 # mlflow
-./experiments/
+experiments/
 ./mlruns/
 
 # Distribution / packaging
